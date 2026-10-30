@@ -113,11 +113,6 @@
     .hb .track { grid-column: 1 / -1; height: 6px; border-radius: 99px; background: var(--raise); overflow: hidden; }
     .hb .track div { height: 100%; border-radius: 99px; background: var(--c, var(--c0)); }
 
-    .recs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 12px; }
-    .rec .v { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin-top: 6px; }
-    .rec .v small { font-size: 13px; color: var(--muted); font-weight: 600; margin-left: 2px; }
-    .rec .d { font-size: 12px; color: var(--muted); margin-top: 2px; }
-    .rec .d .pip { display: inline-block; margin-right: 5px; vertical-align: 1px; }
     .backup { display: flex; align-items: center; gap: 12px; background: var(--card); border-radius: 18px; padding: 14px 16px; margin-bottom: 12px;
       border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
     .backup svg { width: 22px; height: 22px; color: var(--accent); flex: 0 0 auto; }
@@ -264,11 +259,6 @@
     <section class="card">
       <div class="card-head"><div class="eyebrow">Por deporte</div><div class="meta">Últimos 90 días</div></div>
       <div id="bySport"></div>
-    </section>
-
-    <section class="card">
-      <div class="card-head"><div class="eyebrow">Récords</div></div>
-      <div class="recs" id="recs"></div>
     </section>
 
     <section class="card">
@@ -478,46 +468,8 @@ function renderPanel() {
   renderHeat(t);
   renderBars(t);
   renderBySport(t);
-  renderRecords(t);
   renderFacts();
   renderBackup(t);
-}
-
-function renderRecords(t) {
-  let longest = null;
-  const weeks = {}, months = {};
-  for (const k of Object.keys(data.days)) {
-    const es = entriesOf(k);
-    if (!es.length) continue;
-    const d = parseKey(k);
-    es.forEach(e => { if (e.min && (!longest || e.min > longest.min)) longest = { ...e, d }; });
-    const w = weeks[keyOf(startOfWeek(d))] || (weeks[keyOf(startOfWeek(d))] = { min: 0, n: 0 });
-    w.min += minutesOf(k); w.n += es.length;
-    months[k.slice(0, 7)] = (months[k.slice(0, 7)] || 0) + 1;
-  }
-  if (!Object.keys(weeks).length) { $('recs').innerHTML = '<div class="empty" style="grid-column:1/-1">Aquí aparecerán tus mejores marcas.</div>'; return; }
-
-  // Semanas seguidas cumpliendo el objetivo (la semana en curso suma si ya está cumplida)
-  const met = s => ((weeks[keyOf(s)] || {}).n || 0) >= data.goal;
-  let wkStreak = 0, s = startOfWeek(t);
-  if (!met(s)) s = addDays(s, -7);
-  while (met(s)) { wkStreak++; s = addDays(s, -7); }
-  const metTotal = Object.values(weeks).filter(w => w.n >= data.goal).length;
-
-  const useMin = Object.values(weeks).some(w => w.min);
-  const [bwKey, bw] = Object.entries(weeks).sort((a, b) => useMin ? b[1].min - a[1].min : b[1].n - a[1].n)[0];
-  const [bmKey, bm] = Object.entries(months).sort((a, b) => b[1] - a[1])[0];
-  const bmLbl = fmt(parseKey(bmKey + '-01'), { month: 'long', year: 'numeric' }).replace(' de ', ' ');
-  const short = d => fmt(d, { day: 'numeric', month: 'short' });
-  const rec = (lbl, v, d) => `<div class="rec"><div class="eyebrow">${lbl}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
-
-  $('recs').innerHTML =
-    rec('Objetivo cumplido', `${wkStreak}<small>${wkStreak === 1 ? 'semana' : 'semanas'} seguidas</small>`, `${metTotal} cumplidas en total`) +
-    rec('Mejor semana', useMin ? fmtTime(bw.min) : `${bw.n}<small>ses.</small>`, `Semana del ${short(parseKey(bwKey))}`) +
-    (longest
-      ? rec('Sesión más larga', fmtTime(longest.min), `<span class="pip" style="--c:${color(sportById(longest.sport))}"></span>${esc(sportById(longest.sport).name)} · ${short(longest.d)}`)
-      : rec('Sesión más larga', '—', 'Añade la duración')) +
-    rec('Mejor mes', `${bm}<small>días</small>`, bmLbl[0].toUpperCase() + bmLbl.slice(1));
 }
 
 // Aviso de copia de seguridad: aparece si hay datos y la última copia tiene más de 14 días
