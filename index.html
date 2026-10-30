@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Deporte">
+  <meta name="theme-color" content="#0f1115">
+  <title>Mi Deporte</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <link rel="icon" href="icon-192.png">
+  <style>
+    :root {
+      --bg: #f4f5f7; --card: #ffffff; --text: #15171c; --muted: #6b7280;
+      --line: #e5e7eb; --accent: #16a34a; --accent-soft: #dcfce7; --today: #2563eb;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1115; --card: #1a1d24; --text: #f3f4f6; --muted: #9ca3af;
+        --line: #2a2f3a; --accent: #22c55e; --accent-soft: #14361f; --today: #60a5fa;
+      }
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; }
+    body { padding: env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 24px); }
+    header { display: flex; align-items: center; justify-content: space-between; padding: 16px 0 8px; }
+    h1 { font-size: 28px; margin: 0; }
+    button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+    .icon-btn { width: 40px; height: 40px; border-radius: 12px; background: var(--card); font-size: 20px; }
+    .card { background: var(--card); border-radius: 16px; padding: 14px; margin-top: 12px; }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .stat { background: var(--card); border-radius: 14px; padding: 12px 8px; text-align: center; }
+    .stat b { display: block; font-size: 24px; }
+    .stat span { font-size: 12px; color: var(--muted); }
+
+    .month-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .month-nav h2 { font-size: 18px; margin: 0; }
+    .month-nav h2::first-letter, .sheet h3::first-letter { text-transform: uppercase; }
+    .month-nav button { width: 36px; height: 36px; border-radius: 10px; font-size: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+    .dow { text-align: center; font-size: 12px; color: var(--muted); padding: 4px 0; }
+    .day { aspect-ratio: 1 / 1.1; border-radius: 10px; display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-start; padding-top: 4px; font-size: 13px; overflow: hidden; }
+    .day.empty { visibility: hidden; }
+    .day.done { background: var(--accent-soft); }
+    .day.today .num { background: var(--today); color: #fff; border-radius: 999px; padding: 0 6px; }
+    .day.future { opacity: .4; }
+    .day .em { font-size: 15px; line-height: 1.1; letter-spacing: -2px; }
+
+    .list-title { font-size: 15px; color: var(--muted); margin: 20px 4px 4px; }
+    .entry { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .entry:last-child { border-bottom: 0; }
+    .entry .e { font-size: 24px; }
+    .entry .d { font-size: 12px; color: var(--muted); }
+    .entry .grow { flex: 1; }
+    .muted { color: var(--muted); font-size: 14px; }
+
+    /* Hoja inferior */
+    .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; z-index: 10; }
+    .backdrop.open { display: block; }
+    .sheet { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); z-index: 11;
+      border-radius: 20px 20px 0 0; padding: 16px 16px calc(env(safe-area-inset-bottom) + 16px);
+      max-height: 85vh; overflow-y: auto; transform: translateY(100%); visibility: hidden; transition: transform .25s ease, visibility .25s; }
+    .sheet.open { transform: translateY(0); visibility: visible; }
+    .sheet h3 { margin: 0 0 4px; font-size: 20px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+    .chip { padding: 8px 12px; border-radius: 999px; background: var(--bg); border: 2px solid transparent; }
+    .chip.on { border-color: var(--accent); background: var(--accent-soft); }
+    input, select { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line);
+      border-radius: 10px; padding: 10px; width: 100%; font-size: 16px; }
+    .row { display: flex; gap: 8px; margin-top: 8px; }
+    .row > * { flex: 1; }
+    .row .small { flex: 0 0 64px; text-align: center; }
+    .primary { background: var(--accent); color: #fff; border-radius: 12px; padding: 12px; width: 100%;
+      font-weight: 600; margin-top: 12px; }
+    .secondary { background: var(--bg); border-radius: 12px; padding: 12px; width: 100%; margin-top: 8px; }
+    .danger { color: #ef4444; }
+    .x { color: var(--muted); font-size: 18px; padding: 4px 8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Mi Deporte</h1>
+    <button class="icon-btn" id="settingsBtn" aria-label="Ajustes">⚙️</button>
+  </header>
+
+  <div class="stats">
+    <div class="stat"><b id="sStreak">0</b><span>racha (días)</span></div>
+    <div class="stat"><b id="sMonth">0</b><span>días este mes</span></div>
+    <div class="stat"><b id="sTotal">0</b><span>días en total</span></div>
+  </div>
+
+  <div class="card">
+    <div class="month-nav">
+      <button id="prev" aria-label="Mes anterior">‹</button>
+      <h2 id="monthLabel"></h2>
+      <button id="next" aria-label="Mes siguiente">›</button>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <button class="primary" id="todayBtn">+ Añadir deporte hoy</button>
+
+  <div class="list-title">Este mes</div>
+  <div class="card" id="monthList"></div>
+
+  <div class="backdrop" id="backdrop"></div>
+
+  <!-- Hoja para un día -->
+  <div class="sheet" id="daySheet">
+    <h3 id="dayTitle"></h3>
+    <div class="muted">Toca un deporte para añadirlo o quitarlo</div>
+    <div class="chips" id="dayChips"></div>
+    <div id="dayEntries"></div>
+    <div class="row">
+      <input id="minutes" type="number" inputmode="numeric" min="0" placeholder="Minutos (opcional)">
+    </div>
+    <button class="secondary" id="closeDay">Listo</button>
+  </div>
+
+  <!-- Hoja de ajustes -->
+  <div class="sheet" id="settingsSheet">
+    <h3>Mis deportes</h3>
+    <div id="sportList"></div>
+    <div class="row">
+      <input class="small" id="newEmoji" placeholder="🏅" maxlength="4">
+      <input id="newName" placeholder="Nuevo deporte">
+    </div>
+    <button class="primary" id="addSport">Añadir deporte</button>
+    <h3 style="margin-top:20px">Copia de seguridad</h3>
+    <div class="muted">Los datos se guardan solo en este iPhone. Exporta de vez en cuando para no perderlos.</div>
+    <button class="secondary" id="exportBtn">Exportar datos</button>
+    <button class="secondary" id="importBtn">Importar datos</button>
+    <input type="file" id="importFile" accept="application/json,.json" hidden>
+    <button class="secondary" id="closeSettings">Cerrar</button>
+  </div>
+
+<script>
+const KEY = 'mi-deporte-v1';
+const DEFAULT_SPORTS = [
+  { id: 'run', name: 'Correr', emoji: '🏃' },
+  { id: 'gym', name: 'Gimnasio', emoji: '🏋️' },
+  { id: 'bike', name: 'Bici', emoji: '🚴' },
+  { id: 'swim', name: 'Natación', emoji: '🏊' },
+  { id: 'football', name: 'Fútbol', emoji: '⚽' },
+  { id: 'padel', name: 'Pádel', emoji: '🎾' },
+  { id: 'walk', name: 'Caminar', emoji: '🚶' },
+  { id: 'yoga', name: 'Yoga', emoji: '🧘' },
+];
+
+function load() {
+  try {
+    const d = JSON.parse(localStorage.getItem(KEY));
+    if (d && d.sports && d.days) return d;
+  } catch (e) {}
+  return { sports: DEFAULT_SPORTS, days: {} };
+}
+let data = load();
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { alert('No se pudo guardar'); }
+}
+
+// days: { 'YYYY-MM-DD': [ { sport: id, min: number|null } ] }
+const pad = n => String(n).padStart(2, '0');
+const keyOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const sportById = id => data.sports.find(s => s.id === id) || { name: '?', emoji: '❔' };
+const todayKey = () => keyOf(new Date());
+
+let view = new Date(); view.setDate(1);
+let openDay = null;
+const $ = id => document.getElementById(id);
+
+function render() {
+  const y = view.getFullYear(), m = view.getMonth();
+  $('monthLabel').textContent = view.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }).replace(' de ', ' ');
+
+  const grid = $('grid');
+  grid.innerHTML = '';
+  ['L', 'M', 'X', 'J', 'V', 'S', 'D'].forEach(d => grid.insertAdjacentHTML('beforeend', `<div class="dow">${d}</div>`));
+  const offset = (new Date(y, m, 1).getDay() + 6) % 7; // lunes primero
+  for (let i = 0; i < offset; i++) grid.insertAdjacentHTML('beforeend', '<div class="day empty"></div>');
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const tk = todayKey();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const k = keyOf(new Date(y, m, d));
+    const entries = data.days[k] || [];
+    const el = document.createElement('button');
+    el.className = 'day' + (entries.length ? ' done' : '') + (k === tk ? ' today' : '') + (k > tk ? ' future' : '');
+    const emojis = [...new Set(entries.map(e => sportById(e.sport).emoji))].slice(0, 3).join('');
+    el.innerHTML = `<span class="num">${d}</span><span class="em">${emojis}</span>`;
+    el.onclick = () => openDaySheet(k);
+    grid.appendChild(el);
+  }
+
+  // Estadísticas
+  const doneKeys = Object.keys(data.days).filter(k => data.days[k].length);
+  $('sTotal').textContent = doneKeys.length;
+  const prefix = `${y}-${pad(m + 1)}-`;
+  $('sMonth').textContent = doneKeys.filter(k => k.startsWith(prefix)).length;
+  let streak = 0; const c = new Date();
+  if (!(data.days[keyOf(c)] || []).length) c.setDate(c.getDate() - 1); // la racha sigue viva si hoy aún no has entrenado
+  while ((data.days[keyOf(c)] || []).length) { streak++; c.setDate(c.getDate() - 1); }
+  $('sStreak').textContent = streak;
+
+  // Lista del mes
+  const list = $('monthList');
+  const monthKeys = doneKeys.filter(k => k.startsWith(prefix)).sort().reverse();
+  if (!monthKeys.length) { list.innerHTML = '<div class="muted">Aún no hay nada este mes. ¡A moverse! 💪</div>'; return; }
+  list.innerHTML = '';
+  monthKeys.forEach(k => {
+    const label = parseKey(k).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' });
+    data.days[k].forEach(e => {
+      const s = sportById(e.sport);
+      list.insertAdjacentHTML('beforeend',
+        `<div class="entry"><span class="e">${s.emoji}</span><div class="grow">${esc(s.name)}<div class="d">${label}${e.min ? ' · ' + e.min + ' min' : ''}</div></div></div>`);
+    });
+  });
+}
+
+function esc(s) { return s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+function openSheet(id) { $('backdrop').classList.add('open'); $(id).classList.add('open'); }
+function closeSheets() {
+  $('backdrop').classList.remove('open');
+  document.querySelectorAll('.sheet').forEach(s => s.classList.remove('open'));
+  openDay = null; render();
+}
+
+function openDaySheet(k) {
+  openDay = k;
+  $('dayTitle').textContent = parseKey(k).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+  $('minutes').value = '';
+  renderDaySheet();
+  openSheet('daySheet');
+}
+
+function renderDaySheet() {
+  const entries = data.days[openDay] || [];
+  const chips = $('dayChips');
+  chips.innerHTML = '';
+  data.sports.forEach(s => {
+    const b = document.createElement('button');
+    const on = entries.some(e => e.sport === s.id);
+    b.className = 'chip' + (on ? ' on' : '');
+    b.textContent = `${s.emoji} ${s.name}`;
+    b.onclick = () => toggleSport(s.id);
+    chips.appendChild(b);
+  });
+  $('dayEntries').innerHTML = entries.map((e, i) => {
+    const s = sportById(e.sport);
+    return `<div class="entry"><span class="e">${s.emoji}</span><div class="grow">${esc(s.name)}${e.min ? `<div class="d">${e.min} min</div>` : ''}</div><button class="x" data-i="${i}" aria-label="Quitar">✕</button></div>`;
+  }).join('');
+  $('dayEntries').querySelectorAll('.x').forEach(b => b.onclick = () => {
+    entries.splice(+b.dataset.i, 1);
+    if (!entries.length) delete data.days[openDay];
+    save(); renderDaySheet();
+  });
+}
+
+function toggleSport(id) {
+  const entries = data.days[openDay] || (data.days[openDay] = []);
+  const i = entries.findIndex(e => e.sport === id);
+  if (i >= 0) entries.splice(i, 1);
+  else {
+    const min = parseInt($('minutes').value, 10);
+    entries.push({ sport: id, min: min > 0 ? min : null });
+    $('minutes').value = '';
+  }
+  if (!entries.length) delete data.days[openDay];
+  save(); renderDaySheet();
+}
+
+function renderSettings() {
+  $('sportList').innerHTML = data.sports.map(s =>
+    `<div class="entry"><span class="e">${s.emoji}</span><div class="grow">${esc(s.name)}</div><button class="x" data-id="${s.id}" aria-label="Borrar">✕</button></div>`).join('');
+  $('sportList').querySelectorAll('.x').forEach(b => b.onclick = () => {
+    const s = sportById(b.dataset.id);
+    const used = Object.values(data.days).some(es => es.some(e => e.sport === s.id));
+    if (used && !confirm(`"${s.name}" tiene días registrados. ¿Borrarlo igualmente? Esos registros se quitarán.`)) return;
+    data.sports = data.sports.filter(x => x.id !== s.id);
+    for (const k of Object.keys(data.days)) {
+      data.days[k] = data.days[k].filter(e => e.sport !== s.id);
+      if (!data.days[k].length) delete data.days[k];
+    }
+    save(); renderSettings();
+  });
+}
+
+$('prev').onclick = () => { view.setMonth(view.getMonth() - 1); render(); };
+$('next').onclick = () => { view.setMonth(view.getMonth() + 1); render(); };
+$('todayBtn').onclick = () => openDaySheet(todayKey());
+$('backdrop').onclick = closeSheets;
+$('closeDay').onclick = closeSheets;
+$('closeSettings').onclick = closeSheets;
+$('settingsBtn').onclick = () => { renderSettings(); openSheet('settingsSheet'); };
+$('addSport').onclick = () => {
+  const name = $('newName').value.trim();
+  if (!name) return;
+  data.sports.push({ id: 's' + Date.now(), name, emoji: $('newEmoji').value.trim() || '🏅' });
+  $('newName').value = ''; $('newEmoji').value = '';
+  save(); renderSettings();
+};
+$('exportBtn').onclick = async () => {
+  const json = JSON.stringify(data, null, 2);
+  const file = new File([json], `mi-deporte-${todayKey()}.json`, { type: 'application/json' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file); a.download = file.name; a.click();
+};
+$('importBtn').onclick = () => $('importFile').click();
+$('importFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (!d.sports || !d.days) throw 0;
+    if (!confirm('Esto reemplazará tus datos actuales. ¿Continuar?')) return;
+    data = d; save(); renderSettings(); render();
+  } catch (err) { alert('Archivo no válido'); }
+  e.target.value = '';
+};
+
+render();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
