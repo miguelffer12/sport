@@ -2,11 +2,11 @@
 
 App sencilla para iPhone para apuntar qué deporte haces cada día y ver en un calendario los días que has entrenado.
 
-- Calendario mensual: los días con deporte se marcan en verde con el emoji del deporte.
-- Toca un día para añadir o quitar deportes (con minutos opcionales).
-- Racha actual, días este mes y días totales.
-- Deportes personalizables (nombre + emoji) desde ⚙️.
-- Funciona sin conexión. Los datos se guardan en el propio iPhone; exporta/importa una copia desde ⚙️.
+- Panel con progreso semanal frente a tu objetivo, rachas, comparativa con el mes anterior, mapa de actividad de 20 semanas, minutos por semana y reparto por deporte.
+- Calendario mensual con un punto de color por deporte.
+- Botón + para registrar una sesión (deporte y duración) en cualquier día.
+- Deportes y objetivo semanal configurables desde Ajustes.
+- Funciona sin conexión. Los datos se guardan en el propio iPhone; exporta/importa una copia desde Ajustes.
 
 ## Instalar en el iPhone
 
