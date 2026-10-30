@@ -764,9 +764,20 @@ addEventListener('scroll', hideTip, { passive: true });
 function $(id) { return document.getElementById(id); }
 
 render();
-document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
 if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+
+// Actualizaciones: al volver a la app se busca versión nueva y, si la hay, se recarga sola
+let swReg = null;
+if ('serviceWorker' in navigator) {
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(r => swReg = r);
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (hadController) location.reload(); });
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  render();
+  if (swReg) swReg.update();
+});
 </script>
 </body>
 </html>
