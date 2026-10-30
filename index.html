@@ -113,6 +113,17 @@
     .hb .track { grid-column: 1 / -1; height: 6px; border-radius: 99px; background: var(--raise); overflow: hidden; }
     .hb .track div { height: 100%; border-radius: 99px; background: var(--c, var(--c0)); }
 
+    .recs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 12px; }
+    .rec .v { font-size: 20px; font-weight: 700; letter-spacing: -.01em; margin-top: 6px; }
+    .rec .v small { font-size: 13px; color: var(--muted); font-weight: 600; margin-left: 2px; }
+    .rec .d { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .rec .d .pip { display: inline-block; margin-right: 5px; vertical-align: 1px; }
+    .backup { display: flex; align-items: center; gap: 12px; background: var(--card); border-radius: 18px; padding: 14px 16px; margin-bottom: 12px;
+      border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+    .backup svg { width: 22px; height: 22px; color: var(--accent); flex: 0 0 auto; }
+    .backup .grow { flex: 1; font-size: 14px; line-height: 1.35; }
+    .backup .grow span { color: var(--muted); font-size: 13px; }
+    .backup button { background: var(--accent); color: var(--accent-ink); font-weight: 600; font-size: 14px; padding: 8px 14px; border-radius: 99px; }
     .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
     .fact { padding: 2px 10px; border-left: 1px solid var(--line); }
     .fact:first-child { border-left: 0; padding-left: 0; }
@@ -210,6 +221,11 @@
 
   <!-- PANEL -->
   <main id="viewPanel">
+    <div class="backup hidden" id="backupBanner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg>
+      <div class="grow">Haz una copia de tus datos<br><span id="backupAge"></span></div>
+      <button id="backupNow">Copiar</button>
+    </div>
     <section class="card">
       <div class="eyebrow">Esta semana</div>
       <div class="hero-row">
@@ -248,6 +264,11 @@
     <section class="card">
       <div class="card-head"><div class="eyebrow">Por deporte</div><div class="meta">Últimos 90 días</div></div>
       <div id="bySport"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><div class="eyebrow">Récords</div></div>
+      <div class="recs" id="recs"></div>
     </section>
 
     <section class="card">
@@ -321,7 +342,7 @@
       <button class="pill" id="addSport" style="flex:0 0 auto">Añadir</button>
     </div>
     <div class="section-lbl">Copia de seguridad</div>
-    <div class="hint">Tus datos se guardan solo en este iPhone. Exporta una copia de vez en cuando (a Archivos o iCloud).</div>
+    <div class="hint">Tus datos se guardan solo en este iPhone. Exporta una copia de vez en cuando (a Archivos o iCloud). <span id="lastBackup"></span></div>
     <div class="row" style="margin-top:10px">
       <button class="btn ghost" id="exportBtn" style="margin:0">Exportar</button>
       <button class="btn ghost" id="importBtn" style="margin:0">Importar</button>
@@ -457,7 +478,56 @@ function renderPanel() {
   renderHeat(t);
   renderBars(t);
   renderBySport(t);
+  renderRecords(t);
   renderFacts();
+  renderBackup(t);
+}
+
+function renderRecords(t) {
+  let longest = null;
+  const weeks = {}, months = {};
+  for (const k of Object.keys(data.days)) {
+    const es = entriesOf(k);
+    if (!es.length) continue;
+    const d = parseKey(k);
+    es.forEach(e => { if (e.min && (!longest || e.min > longest.min)) longest = { ...e, d }; });
+    const w = weeks[keyOf(startOfWeek(d))] || (weeks[keyOf(startOfWeek(d))] = { min: 0, n: 0 });
+    w.min += minutesOf(k); w.n += es.length;
+    months[k.slice(0, 7)] = (months[k.slice(0, 7)] || 0) + 1;
+  }
+  if (!Object.keys(weeks).length) { $('recs').innerHTML = '<div class="empty" style="grid-column:1/-1">Aquí aparecerán tus mejores marcas.</div>'; return; }
+
+  // Semanas seguidas cumpliendo el objetivo (la semana en curso suma si ya está cumplida)
+  const met = s => ((weeks[keyOf(s)] || {}).n || 0) >= data.goal;
+  let wkStreak = 0, s = startOfWeek(t);
+  if (!met(s)) s = addDays(s, -7);
+  while (met(s)) { wkStreak++; s = addDays(s, -7); }
+  const metTotal = Object.values(weeks).filter(w => w.n >= data.goal).length;
+
+  const useMin = Object.values(weeks).some(w => w.min);
+  const [bwKey, bw] = Object.entries(weeks).sort((a, b) => useMin ? b[1].min - a[1].min : b[1].n - a[1].n)[0];
+  const [bmKey, bm] = Object.entries(months).sort((a, b) => b[1] - a[1])[0];
+  const bmLbl = fmt(parseKey(bmKey + '-01'), { month: 'long', year: 'numeric' }).replace(' de ', ' ');
+  const short = d => fmt(d, { day: 'numeric', month: 'short' });
+  const rec = (lbl, v, d) => `<div class="rec"><div class="eyebrow">${lbl}</div><div class="v">${v}</div><div class="d">${d}</div></div>`;
+
+  $('recs').innerHTML =
+    rec('Objetivo cumplido', `${wkStreak}<small>${wkStreak === 1 ? 'semana' : 'semanas'} seguidas</small>`, `${metTotal} cumplidas en total`) +
+    rec('Mejor semana', useMin ? fmtTime(bw.min) : `${bw.n}<small>ses.</small>`, `Semana del ${short(parseKey(bwKey))}`) +
+    (longest
+      ? rec('Sesión más larga', fmtTime(longest.min), `<span class="pip" style="--c:${color(sportById(longest.sport))}"></span>${esc(sportById(longest.sport).name)} · ${short(longest.d)}`)
+      : rec('Sesión más larga', '—', 'Añade la duración')) +
+    rec('Mejor mes', `${bm}<small>días</small>`, bmLbl[0].toUpperCase() + bmLbl.slice(1));
+}
+
+// Aviso de copia de seguridad: aparece si hay datos y la última copia tiene más de 14 días
+const daysSince = k => k ? Math.round((today() - parseKey(k)) / 864e5) : null;
+const ageText = n => n === null ? 'Nunca has hecho una copia' : n === 0 ? 'Última copia: hoy' : `Última copia: hace ${n} ${n === 1 ? 'día' : 'días'}`;
+function renderBackup() {
+  const sessions = Object.values(data.days).reduce((a, es) => a + es.length, 0);
+  const n = daysSince(data.lastBackup);
+  $('backupBanner').classList.toggle('hidden', sessions < 5 || (n !== null && n < 14));
+  $('backupAge').textContent = ageText(n);
 }
 
 function renderHeat(t) {
@@ -659,6 +729,7 @@ $('addBtn').onclick = () => openLog(keyOf(today()));
 // Ajustes
 function renderSettings() {
   $('goalVal').textContent = data.goal;
+  $('lastBackup').textContent = ageText(daysSince(data.lastBackup)) + '.';
   $('sportList').innerHTML = data.sports.map(s =>
     `<div class="sess" style="--c:${color(s)}"><span class="bar-c"></span><span class="grow">${esc(s.name)}</span>` +
     `<button class="del" data-rm="${s.id}" aria-label="Borrar ${esc(s.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('');
@@ -687,14 +758,21 @@ $('addSport').onclick = () => {
   save(); renderSettings();
 };
 $('newName').onkeydown = e => { if (e.key === 'Enter') $('addSport').click(); };
-$('exportBtn').onclick = async () => {
+async function exportData() {
   const file = new File([JSON.stringify(data, null, 2)], `mi-deporte-${keyOf(today())}.json`, { type: 'application/json' });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; }
+    try { await navigator.share({ files: [file] }); return backedUp(); } catch (e) { if (e.name === 'AbortError') return; }
   }
   const a = document.createElement('a');
   a.href = URL.createObjectURL(file); a.download = file.name; a.click();
-};
+  backedUp();
+}
+function backedUp() {
+  data.lastBackup = keyOf(today()); save();
+  renderBackup(); renderSettings();
+}
+$('exportBtn').onclick = exportData;
+$('backupNow').onclick = exportData;
 $('importBtn').onclick = () => $('importFile').click();
 $('importFile').onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
@@ -735,6 +813,7 @@ function $(id) { return document.getElementById(id); }
 
 render();
 document.addEventListener('visibilitychange', () => { if (!document.hidden) render(); });
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
 </script>
 </body>

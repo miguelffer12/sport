@@ -1,5 +1,5 @@
 // Cache para que la app funcione sin conexión
-const CACHE = 'mi-deporte-v2';
+const CACHE = 'mi-deporte-v3';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
